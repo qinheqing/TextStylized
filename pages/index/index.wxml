@@ -1,0 +1,210 @@
+<!--index.wxml-->
+<navigation-bar title="文案风格化" back="{{false}}" color="black" background="#F2F2F7"></navigation-bar>
+<scroll-view class="scrollarea" scroll-y type="simple">
+  <view class="container">
+    
+    <!-- Tab 切换器 -->
+    <view class="tab-container">
+      <view class="tab-item {{activeTab === 'rewrite' ? 'active' : ''}}" bindtap="onTabChange" data-tab="rewrite">
+        <text>自由改写</text>
+      </view>
+      <view class="tab-item {{activeTab === 'wizard' ? 'active' : ''}}" bindtap="onTabChange" data-tab="wizard">
+        <text>灵感向导</text>
+      </view>
+    </view>
+
+    <!-- 模式一：自由改写 -->
+    <view class="mode-content {{activeTab === 'rewrite' ? 'show' : ''}}" wx:if="{{activeTab === 'rewrite'}}">
+      <view class="section">
+        <view class="section-title">
+          <text class="title-text">原始文案</text>
+          <text class="clear-btn" bindtap="onClearInput" wx:if="{{inputText}}">清空</text>
+        </view>
+        <view class="card input-card">
+          <textarea 
+            class="input-area" 
+            placeholder="输入你想改写的文字..." 
+            value="{{inputText}}"
+            bindinput="onInput"
+            maxlength="300"
+            placeholder-style="color: #C7C7CC;"
+          ></textarea>
+          <view class="char-count">{{inputText.length}}/300</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 模式二：灵感向导 -->
+    <view class="mode-content {{activeTab === 'wizard' ? 'show' : ''}}" wx:if="{{activeTab === 'wizard'}}">
+      <view class="section">
+        <view class="section-title">
+          <text class="title-text">选择创作场景</text>
+        </view>
+        <view class="scenario-grid">
+          <view 
+            class="scenario-card" 
+            wx:for="{{scenarios}}" 
+            wx:key="id" 
+            bindtap="onOpenWizard" 
+            data-id="{{item.id}}"
+          >
+            <view class="scenario-icon-box">
+              <text class="scenario-icon">{{item.icon}}</text>
+            </view>
+            <view class="scenario-info">
+              <text class="scenario-name">{{item.name}}</text>
+              <text class="scenario-desc">{{item.desc}}</text>
+            </view>
+            <view class="arrow-icon">➔</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 风格选择区 (仅在自由改写模式下显示) -->
+    <view class="section" wx:if="{{activeTab === 'rewrite'}}">
+      <view class="section-title">
+        <text class="title-text">改写风格</text>
+      </view>
+      <view class="style-grid">
+        <view 
+          class="style-card {{selectedStyle === item.id ? 'active' : ''}}" 
+          wx:for="{{styles}}" 
+          wx:key="id"
+          bindtap="onSelectStyle"
+          data-id="{{item.id}}"
+        >
+          <text class="style-icon">{{item.icon}}</text>
+          <view class="style-name">{{item.name}}</view>
+          <view class="style-desc">{{item.desc}}</view>
+          <view class="active-badge" wx:if="{{selectedStyle === item.id}}">
+            <icon type="success_no_circle" size="10" color="#FFFFFF"></icon>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 生成按钮 (仅在自由改写模式下显示) -->
+    <button 
+      wx:if="{{activeTab === 'rewrite'}}"
+      class="generate-btn {{loading ? 'loading' : ''}}" 
+      bindtap="onGenerate" 
+      disabled="{{loading}}"
+    >
+      <view class="btn-content">
+        <view class="spinner" wx:if="{{loading}}"></view>
+        <text>{{loading ? '正在构思...' : '确认并开始改写'}}</text>
+      </view>
+    </button>
+
+    <!-- 结果展示区 -->
+    <view class="section">
+      <view class="card result-card {{result || loading ? 'show' : ''}}" wx:if="{{result || loading}}">
+        <view class="section-title">
+          <text class="title-text">生成结果</text>
+          <view class="result-actions" wx:if="{{result && !loading}}">
+            <text class="action-btn" bindtap="onRegenerate">换一批</text>
+            <text class="action-btn" bindtap="onCopyResult">复制</text>
+            <text class="action-btn primary" bindtap="onSaveResult">保存</text>
+          </view>
+        </view>
+        <view class="result-content">
+          <block wx:if="{{!loading}}">
+            <text class="result-text" user-select>{{result}}</text>
+          </block>
+          <view class="skeleton" wx:else>
+            <view class="skeleton-line"></view>
+            <view class="skeleton-line"></view>
+            <view class="skeleton-line short"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="action-footer" wx:if="{{result && !loading}}">
+      <button class="reset-btn" bindtap="onReset">重新开始</button>
+    </view>
+
+    <view class="footer-tips">由 AI 驱动 · 灵感触手可及</view>
+  </view>
+</scroll-view>
+
+<!-- 场景向导弹窗 -->
+<view class="wizard-overlay {{showWizard ? 'show' : ''}}" bindtap="onCloseWizard">
+  <view class="wizard-sheet" catchtap="true">
+    <view class="wizard-header">
+      <view class="scenario-icon-small">{{currentScenario.icon}}</view>
+      <text class="wizard-title">{{currentScenario.name}}</text>
+      <view class="close-icon" bindtap="onCloseWizard">✕</view>
+    </view>
+    
+    <scroll-view scroll-y class="wizard-body">
+      <!-- 第一步：信息填写 -->
+      <view class="wizard-section">
+        <view class="wizard-section-title">1. 完善细节</view>
+        <view class="wizard-field" wx:for="{{currentScenario.fields}}" wx:key="key">
+          <text class="field-label">{{item.label}}</text>
+          <textarea 
+            class="field-input" 
+            placeholder="{{item.placeholder}}" 
+            bindinput="onWizardInput" 
+            data-key="{{item.key}}"
+            value="{{wizardFormData[item.key]}}"
+            fixed
+            auto-height
+          ></textarea>
+        </view>
+      </view>
+      
+      <!-- 第二步：风格选择 -->
+      <view class="wizard-section">
+        <view class="wizard-section-title">2. 选择风格</view>
+        
+        <!-- 建议风格 -->
+        <view class="suggestion-tag-box">
+          <text class="suggestion-label">💡 建议风格：</text>
+          <view class="tag-list">
+            <view 
+              class="suggestion-tag {{selectedStyle === styleId ? 'active' : ''}}" 
+              wx:for="{{currentScenario.suggestedStyles}}" 
+              wx:for-item="styleId" 
+              wx:key="*this"
+              bindtap="onSelectStyle"
+              data-id="{{styleId}}"
+            >
+              {{(styles[0].id === styleId ? styles[0].name : (styles[1].id === styleId ? styles[1].name : (styles[2].id === styleId ? styles[2].name : (styles[3].id === styleId ? styles[3].name : (styles[4].id === styleId ? styles[4].name : (styles[5].id === styleId ? styles[5].name : (styles[6].id === styleId ? styles[6].name : (styles[7].id === styleId ? styles[7].name : (styles[8].id === styleId ? styles[8].name : (styles[9].id === styleId ? styles[9].name : (styles[10].id === styleId ? styles[10].name : styles[11].name)))))))))))}}
+            </view>
+          </view>
+        </view>
+
+        <!-- 所有风格网格 -->
+        <view class="style-grid mini">
+          <view 
+            class="style-card {{selectedStyle === item.id ? 'active' : ''}}" 
+            wx:for="{{styles}}" 
+            wx:key="id"
+            bindtap="onSelectStyle"
+            data-id="{{item.id}}"
+          >
+            <text class="style-icon">{{item.icon}}</text>
+            <view class="style-name">{{item.name}}</view>
+            <view class="active-badge" wx:if="{{selectedStyle === item.id}}">
+              <icon type="success_no_circle" size="8" color="#FFFFFF"></icon>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="wizard-spacer"></view>
+    </scroll-view>
+
+    <view class="wizard-footer">
+      <button class="wizard-gen-btn {{loading ? 'loading' : ''}}" bindtap="onGenerate" disabled="{{loading}}">
+        <view class="btn-content">
+          <view class="spinner" wx:if="{{loading}}"></view>
+          <text>{{loading ? '正在构思...' : '确认并开始生成'}}</text>
+        </view>
+      </button>
+    </view>
+  </view>
+</view>
