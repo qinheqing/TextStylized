@@ -125,7 +125,7 @@
       <button class="reset-btn" bindtap="onReset">重新开始</button>
     </view>
 
-    <view class="footer-tips">由 AI 驱动 · 灵感触手可及</view>
+    <view class="footer-tips">灵感触手可及 · 实验室出品</view>
   </view>
 </scroll-view>
 

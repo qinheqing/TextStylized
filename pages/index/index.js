@@ -552,7 +552,7 @@ Page({
         throw new Error(res.result.error || '云函数调用失败');
       }
     } catch (err) {
-      console.error('AI Service Error:', err);
+      console.error('Service Error:', err);
       throw err;
     }
   }
