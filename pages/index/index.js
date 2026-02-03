@@ -549,10 +549,35 @@ Page({
       if (res.result && res.result.success) {
         return res.result.data;
       } else {
-        throw new Error(res.result.error || '云函数调用失败');
+        const err = res.result;
+        if (err.error === 'LIMIT_EXCEEDED') {
+          wx.showModal({
+            title: '次数已达上限',
+            content: '今日免费构思次数已用完，请联系管理员解锁更多次数。',
+            confirmText: '联系微信',
+            confirmColor: '#007AFF',
+            showCancel: true,
+            success: (modalRes) => {
+              if (modalRes.confirm) {
+                wx.setClipboardData({
+                  data: 'qinheqing',
+                  success: () => {
+                    wx.showToast({ title: '微信已复制', icon: 'success' });
+                  }
+                });
+              }
+            }
+          });
+        } else if (err.error === 'CONTENT_UNSAFE') {
+          wx.showToast({ title: err.message, icon: 'none', duration: 3000 });
+        } else {
+          wx.showToast({ title: err.message || '生成失败', icon: 'none' });
+        }
+        throw new Error(err.message || '调用失败');
       }
     } catch (err) {
       console.error('Service Error:', err);
+      this.setData({ loading: false }); // 确保出错时停止加载状态
       throw err;
     }
   }
